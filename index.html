@@ -1,12 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- Firebase App SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-
-    <!-- Firebase Auth SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
-
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login</title>
@@ -69,25 +63,20 @@
     </div>
 
     <script>
-      const auth = firebase.auth();
+     document
+        .getElementById("loginForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
 
-      function login() {
-        const email = document.getElementById("email").value;
-        const pass = document.getElementById("password").value;
-        auth
-          .signInWithEmailAndPassword(email, pass)
-          .then(() => (window.location.href = "home.html"))
-          .catch((e) => alert(e.message));
-      }
-
-      function signup() {
-        const email = document.getElementById("email").value;
-        const pass = document.getElementById("password").value;
-        auth
-          .createUserWithEmailAndPassword(email, pass)
-          .then(() => alert("Account created. Now login."))
-          .catch((e) => alert(e.message));
-      }
+          // Simple check – replace with real logic if needed
+          if (email === "kapil@retroinc.in" && password === "kapil@1234") {
+            window.location.href = "furniture.html"; // go to your homepage
+          } else {
+            alert("Invalid credentials");
+          }
+        });
     </script>
   </body>
 </html>
