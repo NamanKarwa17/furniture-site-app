@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Furniture Collection</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        background-color: #fff;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      nav img {
+        height: 40px;
+      }
+      main {
+        padding: 20px;
+      }
+      h2 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .form-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+      }
+      form {
+        flex: 1;
+        min-width: 300px;
+        max-width: 400px;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      input,
+      select,
+      button {
+        padding: 10px;
+        font-size: 14px;
+      }
+      .image-preview {
+        width: 150px;
+        height: 150px;
+        border: 1px solid #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff;
+        margin-top: 10px;
+      }
+
+      .image-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .controls {
+        text-align: center;
+        margin-top: 20px;
+      }
+      .item-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* force 2 columns */
+        gap: 20px;
+        margin-top: 30px;
+      }
+
+      .item {
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+      .item img {
+        max-width: 100%;
+        max-height: 120px; /* ⬅️ reduce this height */
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+
+      .delete-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: #ff4d4d;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      @media (max-width: 600px) {
+        .form-container {
+          flex-direction: column;
+          align-items: center;
+        }
+      }
+
+      @media print {
+        nav,
+        .controls,
+        form {
+          display: none !important;
+        }
+
+        .print-page {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          page-break-after: always;
+          margin-bottom: 40px;
+        }
+
+        .item {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        body {
+          margin: 0;
+          background: white;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <img src="logo.png" alt="Logo" />
+      <span><strong>Furniture</strong></span>
+    </nav>
+
+    <main>
+      <h2>Furniture Collection</h2>
+
+      <div class="form-container">
+        <form id="itemForm">
+          <input type="file" id="image" accept="image/*" required />
+          <div class="image-preview" id="preview">Preview will appear here</div>
+          <input type="text" id="code" placeholder="Item Code" required />
+          <input type="text" id="desc" placeholder="Description" required />
+          <input type="number" id="width" placeholder="Width (cm)" required />
+          <input type="number" id="depth" placeholder="Depth (cm)" required />
+          <input type="number" id="height" placeholder="Height (cm)" required />
+          <input type="text" id="material" placeholder="Material" required />
+          <select id="category" required>
+            <option value="" disabled selected>Select Category</option>
+            <option value="Coffee Table">Coffee Table</option>
+            <option value="Console Table">Console Table</option>
+            <option value="Dining Table">Dining Table</option>
+            <option value="Sideboard Table">Sideboard Table</option>
+            <option value="Sitting Table">Sitting Table</option>
+          </select>
+          <button type="submit">Add Item</button>
+        </form>
+      </div>
+
+      <div class="controls">
+        <select id="filterCategory">
+          <option value="">All Categories</option>
+          <option value="Coffee Table">Coffee Table</option>
+          <option value="Console Table">Console Table</option>
+          <option value="Dining Table">Dining Table</option>
+          <option value="Sideboard Table">Sideboard Table</option>
+          <option value="Sitting Table">Sitting Table</option>
+        </select>
+        <button onclick="window.print()">🖨️ Export to PDF</button>
+        <button onclick="exportToCSV()">📄 Export to CSV</button>
+      </div>
+
+      <div class="item-list" id="itemList"></div>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyB28EvCPXHIHe3Qb2acvrmG2Y1v-J5I4Z8",
+          authDomain: "furnitureapp-44d84.firebaseapp.com",
+          projectId: "furnitureapp-44d84",
+          storageBucket: "furnitureapp-44d84.firebasestorage.app",
+          messagingSenderId: "312451042170",
+          appId: "1:312451042170:web:8a8493edc10eea4d5ea4c3"
+        };
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+      // IndexedDB setup
+      let db;
+      const request = indexedDB.open("FurnitureDB", 1);
+
+      request.onupgradeneeded = function (event) {
+        db = event.target.result;
+        const store = db.createObjectStore("items", { keyPath: "code" });
+      };
+
+      request.onsuccess = function (event) {
+        db = event.target.result;
+        displayItems();
+      };
+
+      request.onerror = function () {
+        alert("Database failed to open");
+      };
+
+      const form = document.getElementById("itemForm");
+      const preview = document.getElementById("preview");
+      const itemList = document.getElementById("itemList");
+      const filterCategory = document.getElementById("filterCategory");
+
+      document.getElementById("image").addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            preview.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 100%;">`;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const code = document.getElementById("code").value.trim();
+        const transaction = db.transaction(["items"], "readonly");
+        const store = transaction.objectStore("items");
+        const checkRequest = store.get(code);
+
+        checkRequest.onsuccess = function () {
+          if (checkRequest.result) {
+            alert("ITEM CODE IS ALREADY USED. PLEASE CHECK!!");
+            return;
+          }
+
+          const image = document.getElementById("image").files[0];
+          const reader = new FileReader();
+          reader.onload = function () {
+            const newItem = {
+              image: reader.result,
+              code,
+              desc: document.getElementById("desc").value,
+              width: document.getElementById("width").value,
+              depth: document.getElementById("depth").value,
+              height: document.getElementById("height").value,
+              material: document.getElementById("material").value,
+              category: document.getElementById("category").value,
+            };
+            const writeTx = db.transaction(["items"], "readwrite");
+            writeTx.objectStore("items").add(newItem);
+            writeTx.oncomplete = function () {
+              form.reset();
+              preview.innerHTML = "Preview will appear here";
+              displayItems();
+            };
+          };
+          reader.readAsDataURL(image);
+        };
+      });
+
+      function displayItems() {
+        const selectedCategory = filterCategory.value;
+        itemList.innerHTML = "";
+
+        const tx = db.transaction(["items"], "readonly");
+        const store = tx.objectStore("items");
+        const request = store.getAll();
+
+        request.onsuccess = function () {
+          const allItems = request.result;
+
+          const filteredItems = selectedCategory
+            ? allItems.filter((item) => item.category === selectedCategory)
+            : allItems;
+
+          filteredItems.forEach((item) => {
+            const div = document.createElement("div");
+            div.className = "item";
+            div.innerHTML = `
+              <button class="delete-btn" onclick="deleteItem('${item.code}')">Delete</button>
+              <img src="${item.image}" alt="Item">
+              <p><strong>Item Code:</strong> ${item.code}</p>
+              <p><strong>Description:</strong> ${item.desc}</p>
+              <p><strong>Size:</strong> ${item.width}W x ${item.depth}D x ${item.height}H cm</p>
+              <p><strong>Material:</strong> ${item.material}</p>
+              <p><strong>Category:</strong> ${item.category}</p>
+            `;
+            itemList.appendChild(div);
+          });
+        };
+      }
+
+      function exportToCSV() {
+        const tx = db.transaction(["items"], "readonly");
+        const store = tx.objectStore("items");
+        const request = store.getAll();
+
+        request.onsuccess = function () {
+          const items = request.result;
+
+          if (!items.length) {
+            alert("No items to export.");
+            return;
+          }
+
+          // CSV header
+          let csv =
+            "Item Code,Description,Width,Depth,Height,Material,Category\n";
+
+          // Add rows
+          items.forEach((item) => {
+            csv += `"${item.code}","${item.desc}",${item.width},${item.depth},${item.height},"${item.material}","${item.category}"\n`;
+          });
+
+          // Trigger download
+          const blob = new Blob([csv], { type: "text/csv" });
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "furniture_items.csv";
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+      }
+
+      function deleteItem(code) {
+        const tx = db.transaction(["items"], "readwrite");
+        tx.objectStore("items").delete(code);
+        tx.oncomplete = displayItems;
+      }
+
+      filterCategory.addEventListener("change", displayItems);
+    </script>
+  </body>
+</html>
